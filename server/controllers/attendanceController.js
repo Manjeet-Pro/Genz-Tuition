@@ -80,10 +80,12 @@ const getMonthlyAttendanceReport = async (req, res) => {
       date: { $gte: startDate, $lte: endDate }
     }).populate('student', 'fullName studentClass');
 
-    // Aggregate stats per student
     const report = {};
 
     attendance.forEach(record => {
+      // Skip if student data is missing (e.g. deleted student)
+      if (!record.student) return;
+
       const studentId = record.student._id.toString();
       if (!report[studentId]) {
         report[studentId] = {
@@ -96,8 +98,11 @@ const getMonthlyAttendanceReport = async (req, res) => {
         };
       }
 
-      report[studentId][record.status.toLowerCase()]++;
-      report[studentId].total++;
+      const status = record.status.toLowerCase();
+      if (report[studentId].hasOwnProperty(status)) {
+        report[studentId][status]++;
+        report[studentId].total++;
+      }
     });
 
     res.json(Object.values(report));
